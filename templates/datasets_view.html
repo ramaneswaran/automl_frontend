@@ -49,20 +49,19 @@
                           <tr>
                             <th scope="col">#</th>
                             <th scope="col">Name</th>
-                            <th scope="col">Last Updated</th>
                           </tr>
                         </thead>
                         <tbody>
-                          <tr>
-                            <th scope="row">1</th>
-                            <td>SNIPS</td>
-                            <td>29/11/21</td>
-                          </tr>
-                          <tr>
-                            <th scope="row">2</th>
-                            <td>ATIS</td>
-                            <td>29/11/21</td>
-                          </tr>
+                            {%for idx, name in dataset_names%}
+                            <tr>
+                                <td>
+                                    {{idx}}
+                                </td>
+                                <td>
+                                    {{name}}
+                                </td>
+                            </tr>
+                        {%endfor%}
                         </tbody>
                       </table>
                 </div>

@@ -4,6 +4,10 @@ import json
 import pickle
 import time
 
+
+import boto3
+import botocore
+
 from flask import Flask
 from flask import render_template
 from flask import jsonify , request
@@ -16,7 +20,13 @@ app = Flask(__name__,static_url_path='',
 
 app.config['SECRET_KEY'] = 'secres'    
 
+s3 = boto3.resource('s3',aws_access_key_id = os.environ.get("aws_access_key"), aws_secret_access_key = os.environ.get("aws_secret_key"),
+         region_name = 'ap-south-1')
 
+
+def get_datasets_names():
+    pass 
+    return [(1, "ATIS V1"), (2, "ATIS V2")]
 
 def get_preds(text: str):
 
@@ -49,7 +59,10 @@ def login():
 
 @app.route('/datasets/', methods=['GET'])
 def datasets():
-    return render_template('datasets_view.html')
+
+    dataset_names = get_datasets_names()
+
+    return render_template('datasets_view.html', dataset_names=dataset_names)
 
 @app.route('/models/', methods=['GET'])
 def model():
