@@ -4,6 +4,7 @@ import json
 import pickle
 import time
 from shutil import make_archive
+import shutil
 import datetime
 import boto3
 import botocore
@@ -25,9 +26,121 @@ s3 = boto3.resource('s3',aws_access_key_id = os.environ.get("aws_access_key"), a
          region_name = 'ap-south-1')
 
 
+#Data parser class
+class DataParser:
+
+    def __init__(self, train_path, val_path):
+
+        self.train_path = train_path
+        self.val_path = val_path
+
+        self.train_data = self._read_data(self.train_path)
+        self.val_data = self._read_data(self.val_path)
+
+        self.intent_encoder = self._train_intent_encoder()
+        self.tag_encoder = self._train_tag_encoder()
+
+    def _read_data(self, data_path):
+        f = open(data_path, 'r')
+        content = f.readlines()
+        f.close()
+        
+        data = []
+        
+        for item in content:
+            text, annotations = item.split('\t')
+            
+            sample = []
+            
+            for token, annotation in zip(text.split(), annotations.split()):
+                sample.append((token, annotation))
+        
+            data.append(sample)
+            
+        return data
+
+    def _train_intent_encoder(self):
+        # Get all intents
+        intents = set()
+        annotations = set()
+        for data in self.train_data:
+            token, annotation = data[-1]
+            intents.add(annotation)
+                
+        for data in self.val_data:
+            token, annotation = data[-1]
+            intents.add(annotation)
+
+        intents = list(intents)
+
+        # Fit label encoder for intents
+        intent_encoder = LabelEncoder()
+        intent_encoder.fit(intents)
+
+        return intent_encoder
+
+    def _train_tag_encoder(self):
+        # Get all tags
+        annotations = set()
+        for data in self.train_data:
+            for token, annotation in data[1:-1]:
+                annotations.add(annotation)
+                
+        for data in self.val_data:
+            for token, annotation in data[1:-1]:
+                annotations.add(annotation)
+
+        annotations = list(annotations)
+
+        # Fit a label encoder
+        label_encoder = LabelEncoder()
+        label_encoder.fit(annotations)
+
+        return label_encoder
+
+    def write_config(self, save_dir):
+
+        if os.path.exists(save_dir) is False:
+            os.mkdir(save_dir)
+
+        train_save_path = os.path.join(save_dir, 'train.pkl')
+        with open(train_save_path, 'wb') as f:
+            pickle.dump(self.train_data, f)
+
+        val_save_path = os.path.join(save_dir, 'val.pkl')
+        with open(val_save_path, 'wb') as f:
+            pickle.dump(self.val_data, f)
+        
+        config = {
+            'num_intents': len(self.intent_encoder.classes_),
+            'num_tags': len(self.tag_encoder.classes_),
+            'train_path': train_save_path,
+            'val_path': val_save_path, 
+        }
+
+        # Serializing json 
+        json_object = json.dumps(config, indent = 4)
+        
+        config_path = os.path.join(save_dir, 'config.json')
+
+        # Writing to sample.json
+        with open(config_path, "w") as outfile:
+            outfile.write(json_object)
+    
+
 def get_datasets_names():
-    pass 
-    return [(1, "ATIS V1"), (2, "ATIS V2")]
+
+    dataset_bucket = s3.Bucket('automl-training-data-s3')
+
+
+    dataset_names = [(idx+1, bucket_obj.key) for idx, bucket_obj in enumerate(dataset_bucket.objects.all())]
+    # count = 1
+    # dataset_names = []
+    # for item in dataset_bucket.objects.all():
+    #     dataset_names.append((count, item.key))
+    #     count += 1
+    # return [(1, "ATIS V1"), (2, "ATIS V2")]
+    return dataset_names
 
 def get_preds(text: str):
 
@@ -69,126 +182,44 @@ def upload_datasets():
 
 @app.route('/uploader', methods=['GET','POST'] )
 def uploader():
-    train_path = "../Dataset/atis-2.train.w-intent.iob"
-    val_path = "../Dataset/atis-2.dev.w-intent.iob" 
-    #Data parser class
-    class DataParser:
-
-        def __init__(self, train_path, val_path):
-
-            self.train_path = train_path
-            self.val_path = val_path
-
-            self.train_data = self._read_data(self.train_path)
-            self.val_data = self._read_data(self.val_path)
-
-            self.intent_encoder = self._train_intent_encoder()
-            self.tag_encoder = self._train_tag_encoder()
-
-        def _read_data(self, data_path):
-            f = open(data_path, 'r')
-            content = f.readlines()
-            f.close()
-            
-            data = []
-            
-            for item in content:
-                text, annotations = item.split('\t')
-                
-                sample = []
-                
-                for token, annotation in zip(text.split(), annotations.split()):
-                    sample.append((token, annotation))
-            
-                data.append(sample)
-                
-            return data
-
-        def _train_intent_encoder(self):
-            # Get all intents
-            intents = set()
-            annotations = set()
-            for data in self.train_data:
-                token, annotation = data[-1]
-                intents.add(annotation)
-                    
-            for data in self.val_data:
-                token, annotation = data[-1]
-                intents.add(annotation)
-
-            intents = list(intents)
-
-            # Fit label encoder for intents
-            intent_encoder = LabelEncoder()
-            intent_encoder.fit(intents)
-
-            return intent_encoder
-
-        def _train_tag_encoder(self):
-            # Get all tags
-            annotations = set()
-            for data in self.train_data:
-                for token, annotation in data[1:-1]:
-                    annotations.add(annotation)
-                    
-            for data in self.val_data:
-                for token, annotation in data[1:-1]:
-                    annotations.add(annotation)
-
-            annotations = list(annotations)
-
-            # Fit a label encoder
-            label_encoder = LabelEncoder()
-            label_encoder.fit(annotations)
-
-            return label_encoder
-
-        def write_config(self, save_dir):
-
-            if os.path.exists(save_dir) is False:
-             os.mkdir(save_dir)
-
-            train_save_path = os.path.join(save_dir, 'train.pkl')
-            with open(train_save_path, 'wb') as f:
-                pickle.dump(self.train_data, f)
-
-            val_save_path = os.path.join(save_dir, 'val.pkl')
-            with open(val_save_path, 'wb') as f:
-                pickle.dump(self.val_data, f)
-            
-            config = {
-                'num_intents': len(self.intent_encoder.classes_),
-                'num_tags': len(self.tag_encoder.classes_),
-                'train_path': train_save_path,
-                'val_path': val_save_path, 
-            }
-
-            # Serializing json 
-            json_object = json.dumps(config, indent = 4)
-            
-            config_path = os.path.join(save_dir, 'config.json')
-
-            # Writing to sample.json
-            with open(config_path, "w") as outfile:
-                outfile.write(json_object)
-    #                               *************************                          #
     
     if request.method == 'POST':
-        file = request.files
+
+        file_names = request.files.keys()
+
+        dataset_name = request.form.get('name')
+
         current_time = str(datetime.datetime.now())
+
+        temp_dir = 'temp_dir'
+
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+        
+        os.mkdir(temp_dir)
+
+        data_paths = {}
+        for file_name in file_names:
+            save_path = os.path.join(temp_dir, request.files[file_name].filename)
+            data_paths[file_name] = save_path
+            request.files[file_name].save(save_path)
+
     
-        parser = DataParser(train_path, val_path)
-        parser.write_config('parsed_data')
+            
+
+        parser = DataParser(data_paths['train'], data_paths['val'])
+        parser.write_config(temp_dir)
     
-        zip_file = "data"  #zip file name 
-        directory = "./parsed_data"
-        make_archive(zip_file, "zip", directory)    
+        zip_file = f"{dataset_name}"  #zip file name 
+        make_archive(zip_file, "zip", temp_dir)    
+        
         try:
-            s3.meta.client.upload_file('./data.zip', 'automl-training-data-s3', 'data'+current_time+'.zip')    
+            s3.meta.client.upload_file(f"{zip_file}.zip", 'automl-training-data-s3', f"{zip_file}.zip")    
         except botocore.exceptions.ClientError as e:
             return {"status": e}  #response added 
-
-        return 'success'
+        
+        flash("Dataset uploaded successfully") 
+        return redirect('/home/')
 
 @app.route('/models/', methods=['GET'])
 def model():

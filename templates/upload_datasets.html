@@ -41,19 +41,48 @@
             </div>
         </nav>
         <!-- Page Content-->
-        <div class="container ">
-            <div class="col-md-4 mb-5">
-                <div class="card h-100">
-                
-                <form action = "/uploader" method = "POST" enctype = "multipart/form-data">
-                    <input type = "file" name = "Train" />
-                    <input type = "file" name = "Val" />
-                    <input type = "submit"/>
-                </form>
-                   
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-md-6 col-lg-5">
+                    <div class="login-wrap p-4 p-md-5">
+                        <div class="icon d-flex align-items-center
+                            justify-content-center">
+                            <span class="fa fa-user-o"></span>
+                        </div>
+                        <form action="/uploader" method = "POST" enctype = "multipart/form-data" class="login-form justify-content-center">
+                            <div class="form-group">
+                                <h6 class="display-6">Upload Datasets</h6>
+                            </div>
+                            <div class="form-group">
+                                <span>Train Dataset</span>
+                                <input type = "file" name = "train" />
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <span>Validation Dataset</span>
+                                <input type = "file" name = "val" />
+                            </div>  
+                            <br>
+                            <div class="form-group">
+                                <span>Dataset Name</span>
+                                <input type = "type" name = "name" />
+                            </div>  
+                            <br>
+                            <div class="form-group">
+                                <button type="submit" class="btn btn-primary
+                                    rounded submit p-3 px-5">Submit</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- Footer-->
+        <footer class="py-5 bg-dark">
+            <div class="container px-4 px-lg-5"><p class="m-0 text-center
+                    text-white">Copyright &copy; AutoML 2021</p></div>
+        </footer>
         <!-- Bootstrap core JS-->
         <script
             src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
