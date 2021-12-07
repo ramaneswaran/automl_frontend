@@ -44,21 +44,35 @@
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-md-8 col-lg-8">
-                    <form action="#" class="justify-content-center">
+                    <form action="/train/" method = "POST" class="justify-content-center">
                         <div class="form-group">
-                            <h6 class="display-6">Model Name</h6>
+                            <h6 class="display-6">Train Model</h6>
                         </div>
-        
+                        <div class="form-group">
+                            <span>Model Architecture</span>
+                            <br>
+                            <select class="form-select" name="arch" aria-label="Default select example">
+                                <option selected  value="albert">ALBERT</option>
+                                <option value="xlmr">XLM Roberta</option>
+                                <option value="indic-bert">Indic BERT</option>
+                                <option value="muril">MURIL</option>
+                              </select>
+                        </div>
                         <br>
-                        <div class="form-group d-flex">
-                            <input type="text" class="form-control
-                                rounded-left" placeholder="Input text"
-                                required>
+                        <div class="form-group">
+                            <span>Dataset</span>
+                            <br>
+                            <select class="form-select" name="dataset" aria-label="Default select example">
+                                {%for idx, name in dataset_names%}
+                                    <option value={{name}}>{{name}}</option>        
+                                {%endfor%}
+                            </select>
+
                         </div>  
                         <br>
                         <div class="form-group">
                             <button type="submit" class="btn btn-primary
-                                rounded submit p-3 px-5">Get Predictions</button>
+                                rounded submit p-3 px-5">Train Model</button>
                         </div>
                         <hr>
                         <div class="form-group">

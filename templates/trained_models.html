@@ -53,22 +53,26 @@
                           </tr>
                         </thead>
                         <tbody>
-                          <tr>
-                            <th scope="row">1</th>
-                            <td>Joint BERT v1 </td>
-                            <td><a href="/test" class="btn btn-primary">Test</a></td>
-                          </tr>
-                          <tr>
-                            <th scope="row">2</th>
-                            <td>Joint BERT v2</td>
-                            <td><a href="/test" class="btn btn-primary">Test</a></td>
-                          </tr>
+                        {%for idx, name in model_names%}
+                            <tr>
+                                <td>
+                                    {{idx}}
+                                </td>
+                                <td>
+                                    {{name}}
+                                </td>
+                                <td>
+                                    <a href=/test/{{name}} class="btn btn-primary">Test</a>
+                                </td>
+                            </tr>
+                        {%endfor%}
                         </tbody>
                       </table>
                 </div>
             </div>
         </div>
-
+        
+    </tr>
         <!-- Bootstrap core JS-->
         <script
             src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>

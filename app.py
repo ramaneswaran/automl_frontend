@@ -13,13 +13,16 @@ from flask import render_template
 from flask import jsonify , request
 from flask import session , redirect
 import json
+from flask_cors import CORS, cross_origin
 from sklearn.preprocessing import LabelEncoder
+import requests
 
 app = Flask(__name__,static_url_path='', 
             static_folder='static',
             template_folder='templates')
 
-
+cors = CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
 app.config['SECRET_KEY'] = 'secres'    
 
 s3 = boto3.resource('s3',aws_access_key_id = os.environ.get("aws_access_key"), aws_secret_access_key = os.environ.get("aws_secret_key"),
@@ -131,32 +134,38 @@ class DataParser:
 def get_datasets_names():
 
     dataset_bucket = s3.Bucket('automl-training-data-s3')
-
-
     dataset_names = [(idx+1, bucket_obj.key) for idx, bucket_obj in enumerate(dataset_bucket.objects.all())]
-    # count = 1
-    # dataset_names = []
-    # for item in dataset_bucket.objects.all():
-    #     dataset_names.append((count, item.key))
-    #     count += 1
+
     # return [(1, "ATIS V1"), (2, "ATIS V2")]
+    return dataset_names
+
+def get_model_names():
+
+    dataset_bucket = s3.Bucket('automl-models-s3')
+    dataset_names = [(idx+1, bucket_obj.key) for idx, bucket_obj in enumerate(dataset_bucket.objects.all())]
+
+    # return [(1, "Albertv2"), (2, "Roberta")]
+
     return dataset_names
 
 def get_preds(text: str):
 
-    time.sleep(2)
+    url = 'http://localhost:8000/predict/'
+    result = requests.get(url, params={'text': text})
 
-    text =  '<p>I want a flight from <span class="badge bg-secondary">Mumbai</span> to <span class="badge bg-secondary">Delhi</span></p>'
-    intent = 'Get Flight'
-    entities = [('Source', 'Mumbai'), ('Destination', 'Delhi')]
+    # print(result.json())
 
-    preds = {
-        'intent': intent,
-        'text': text,   
-        'entities': entities
-    }
+    # text =  '<p>I want a flight from <span class="badge bg-secondary">Mumbai</span> to <span class="badge bg-secondary">Delhi</span></p>'
+    # intent = 'Get Flight'
+    # entities = [('Source', 'Mumbai'), ('Destination', 'Delhi')]
 
-    return preds
+    # preds = {
+    #     'intent': intent,
+    #     'text': text,   
+    #     'entities': entities
+    # }
+
+    return result.json()
 
 
 @app.route('/')
@@ -223,23 +232,45 @@ def uploader():
 
 @app.route('/models/', methods=['GET'])
 def model():
-    return render_template('trained_models.html')
+    model_names = get_model_names()
+    return render_template('trained_models.html', model_names=model_names)
 
-@app.route('/test/', methods=['GET', 'POST'])
-def test():
-
-    return render_template('test_model.html', preds=None)
+@app.route('/test/<model_name>', methods=['GET', 'POST'])
+def test(model_name: str):
+    return render_template('test_model.html', model_name=model_name)
 
 
 @app.route('/prediction/', methods=["POST"])
 def prediction():
-    preds = get_preds("")
+
+    text = request.form['input_text']
+    preds = get_preds(text)
 
     return render_template('test_model.html', preds=preds)
 
-@app.route('/train/', methods=['GET'])
+@app.route('/train/', methods=['GET', 'POST'])
 def train():
-    return render_template('train_model.html')
+
+    if request.method == 'GET': 
+        dataset_names =  get_datasets_names()
+
+        return render_template('train_model.html', dataset_names=dataset_names)
+    
+    elif request.method == 'POST':
+
+        
+        url = 'http://localhost:8000/train/'
+        train_params = {
+            'arch': request.form.get("arch"),
+            'dataset': request.form.get('dataset')
+            }
+
+        x = requests.post(url, json=train_params)
+
+        flash("Model Training In progress") 
+        return render_template('home.html')
+
+
     
 if __name__ == '__main__':
 
