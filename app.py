@@ -23,7 +23,8 @@ app = Flask(__name__,static_url_path='',
 
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
-app.config['SECRET_KEY'] = 'secres'    
+app.config['SECRET_KEY'] = 'secres'  
+app.config['ENGINE_URL'] = 'http://localhost:8000'  
 
 s3 = boto3.resource('s3',aws_access_key_id = os.environ.get("aws_access_key"), aws_secret_access_key = os.environ.get("aws_secret_key"),
          region_name = 'ap-south-1')
@@ -150,7 +151,7 @@ def get_model_names():
 
 def get_preds(text: str):
 
-    url = 'http://localhost:8000/predict/'
+    url = f"{app.config['ENGINE_URL']}/predict/"
     result = requests.get(url, params={'text': text})
 
     # print(result.json())
@@ -259,7 +260,7 @@ def train():
     elif request.method == 'POST':
 
         
-        url = 'http://localhost:8000/train/'
+        url = f"{app.config['ENGINE_URL'] }/train/"
         train_params = {
             'arch': request.form.get("arch"),
             'dataset': request.form.get('dataset')
